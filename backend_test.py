@@ -151,7 +151,7 @@ class VehicleManagementTester:
         return False
 
     def test_dashboard_stats_empty(self):
-        """Test dashboard stats with no vehicles"""
+        """Test dashboard stats with no vehicles - should have 7 fields now"""
         success, response = self.run_test(
             "Dashboard Stats (Empty)",
             "GET",
@@ -159,13 +159,16 @@ class VehicleManagementTester:
             200
         )
         if success:
-            expected_fields = ['total_vehicles', 'expired_documents', 'expiring_soon', 'valid_documents']
+            expected_fields = ['total_vehicles', 'expired_documents', 'expiring_soon', 'valid_documents', 
+                             'total_challans', 'unpaid_challans', 'upcoming_services']
             has_all_fields = all(field in response for field in expected_fields)
             if has_all_fields and response['total_vehicles'] == 0:
-                print("✅ Empty dashboard stats correct")
+                print("✅ Empty dashboard stats correct - all 7 fields present")
                 return True
             else:
-                print(f"❌ Dashboard stats structure incorrect: {response}")
+                missing_fields = [f for f in expected_fields if f not in response]
+                print(f"❌ Dashboard stats structure incorrect. Missing: {missing_fields}")
+                print(f"Response: {response}")
         return False
 
     def test_get_vehicles_empty(self):
