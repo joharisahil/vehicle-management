@@ -209,16 +209,18 @@ async def get_vehicles(
     vehicle_type: Optional[str] = Query(None),
     challan_filter: Optional[str] = Query(None),
     service_filter: Optional[str] = Query(None),
-    show_inactive: bool = Query(False),
+    active_filter: Optional[str] = Query("active"),
     page: int = Query(1, ge=1),
     limit: int = Query(10, ge=1, le=100)
 ):
     query = {"user_id": current_user["id"]}
     
-    if not show_inactive:
+    if active_filter == "active":
         query["is_active"] = {"$ne": False}
+    elif active_filter == "inactive":
+        query["is_active"] = False
     
-    if vehicle_type:
+    if vehicle_type and vehicle_type.strip():
         query["vehicle_type"] = vehicle_type
     
     vehicles = await db.vehicles.find(query, {"_id": 0}).to_list(10000)
@@ -230,15 +232,15 @@ async def get_vehicles(
     for vehicle in vehicles:
         vehicle["status"] = get_vehicle_status(vehicle.get("documents", []))
         
-        if status_filter and vehicle["status"] != status_filter:
+        if status_filter and status_filter.strip() and vehicle["status"] != status_filter:
             continue
         
-        if challan_filter == "unpaid":
+        if challan_filter and challan_filter.strip() == "unpaid":
             unpaid = sum(1 for c in vehicle.get("challans", []) if c.get("status") == "unpaid")
             if unpaid == 0:
                 continue
         
-        if service_filter == "upcoming":
+        if service_filter and service_filter.strip() == "upcoming":
             has_upcoming = False
             for service in vehicle.get("services", []):
                 next_due = service.get("next_service_due")
