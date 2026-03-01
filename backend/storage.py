@@ -20,11 +20,16 @@ def init_storage():
         return storage_key
     
     try:
+        if not EMERGENT_KEY:
+            raise ValueError("EMERGENT_LLM_KEY not found in environment")
+        
+        logger.info(f"Initializing storage with key: {EMERGENT_KEY[:20]}...")
         resp = requests.post(
             f"{STORAGE_URL}/init",
             json={"emergent_key": EMERGENT_KEY},
             timeout=30
         )
+        logger.info(f"Storage API response status: {resp.status_code}")
         resp.raise_for_status()
         storage_key = resp.json()["storage_key"]
         last_init_time = current_time
@@ -32,6 +37,7 @@ def init_storage():
         return storage_key
     except Exception as e:
         logger.error(f"Storage init failed: {e}")
+        logger.error(f"Response text: {getattr(resp, 'text', 'N/A')}")
         raise
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
