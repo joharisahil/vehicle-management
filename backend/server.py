@@ -195,7 +195,14 @@ async def download_file(
             raise HTTPException(status_code=404, detail="File not found")
         
         data, content_type = get_object(path)
-        return Response(content=data, media_type=record.get("content_type", content_type))
+        
+        filename = record.get("original_filename", "document")
+        
+        return Response(
+            content=data, 
+            media_type=record.get("content_type", content_type),
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
     except HTTPException:
         raise
     except Exception as e:
