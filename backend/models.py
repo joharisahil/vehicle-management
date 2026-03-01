@@ -96,6 +96,7 @@ class VehicleUpdate(BaseModel):
     year: Optional[int] = None
     fuel_type: Optional[str] = None
     odometer: Optional[int] = None
+    is_active: Optional[bool] = None
     documents: Optional[List[DocumentSchema]] = None
     challans: Optional[List[ChallanSchema]] = None
     services: Optional[List[ServiceSchema]] = None
