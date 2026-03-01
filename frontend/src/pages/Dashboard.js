@@ -295,24 +295,24 @@ export const Dashboard = () => {
               </SelectContent>
             </Select>
 
-            <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+            <Select value={filters.status || ''} onValueChange={(value) => handleFilterChange('status', value === 'all' ? null : value)}>
               <SelectTrigger data-testid="status-filter">
                 <SelectValue placeholder="Document Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="valid">Valid</SelectItem>
                 <SelectItem value="expiring">Expiring Soon</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={filters.vehicleType} onValueChange={(value) => handleFilterChange('vehicleType', value)}>
+            <Select value={filters.vehicleType || ''} onValueChange={(value) => handleFilterChange('vehicleType', value === 'all' ? null : value)}>
               <SelectTrigger data-testid="vehicle-type-filter">
                 <SelectValue placeholder="Vehicle Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Types</SelectItem>
+                <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="Car">Car</SelectItem>
                 <SelectItem value="Motorcycle">Motorcycle</SelectItem>
                 <SelectItem value="Truck">Truck</SelectItem>
@@ -322,22 +322,22 @@ export const Dashboard = () => {
               </SelectContent>
             </Select>
 
-            <Select value={filters.challanFilter} onValueChange={(value) => handleFilterChange('challanFilter', value)}>
+            <Select value={filters.challanFilter || ''} onValueChange={(value) => handleFilterChange('challanFilter', value === 'all' ? null : value)}>
               <SelectTrigger data-testid="challan-filter">
                 <SelectValue placeholder="Challans" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Challans</SelectItem>
+                <SelectItem value="all">All Challans</SelectItem>
                 <SelectItem value="unpaid">Unpaid Only</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select value={filters.serviceFilter} onValueChange={(value) => handleFilterChange('serviceFilter', value)}>
+            <Select value={filters.serviceFilter || ''} onValueChange={(value) => handleFilterChange('serviceFilter', value === 'all' ? null : value)}>
               <SelectTrigger data-testid="service-filter">
                 <SelectValue placeholder="Services" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Services</SelectItem>
+                <SelectItem value="all">All Services</SelectItem>
                 <SelectItem value="upcoming">Upcoming Only</SelectItem>
               </SelectContent>
             </Select>
