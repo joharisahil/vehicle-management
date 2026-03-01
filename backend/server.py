@@ -91,6 +91,58 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found")
     return User(**user)
 
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPassword):
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+    if not user:
+        return {"message": "If the email exists, a reset code has been sent"}
+    
+    reset_code = generate_reset_code()
+    expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    await db.password_resets.insert_one({
+        "email": data.email,
+        "reset_code": reset_code,
+        "expiry": expiry.isoformat(),
+        "used": False
+    })
+    
+    logger.info(f"[PASSWORD RESET] Email: {data.email}, Code: {reset_code}")
+    print(f"\\n=== PASSWORD RESET CODE ===\")
+    print(f\"Email: {data.email}\")
+    print(f\"Reset Code: {reset_code}\")
+    print(f\"Valid for: 1 hour\")
+    print(f\"=========================\\n\")
+    
+    return {"message": "If the email exists, a reset code has been sent"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPassword):
+    reset_record = await db.password_resets.find_one({
+        "email": data.email,
+        "reset_code": data.reset_code,
+        "used": False
+    }, {"_id": 0})
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset code")
+    
+    expiry = datetime.fromisoformat(reset_record["expiry"])
+    if datetime.now(timezone.utc) > expiry:
+        raise HTTPException(status_code=400, detail="Reset code has expired")
+    
+    await db.users.update_one(
+        {"email": data.email},
+        {"$set": {"password_hash": hash_password(data.new_password)}}
+    )
+    
+    await db.password_resets.update_one(
+        {"email": data.email, "reset_code": data.reset_code},
+        {"$set": {"used": True}}
+    )
+    
+    return {"message": "Password reset successfully"}
+
 @api_router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
