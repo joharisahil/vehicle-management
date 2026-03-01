@@ -76,6 +76,17 @@ export const VehicleCard = ({ vehicle, onDelete }) => {
         </div>
       </div>
 
+      <div className="flex items-center gap-4 mb-4 text-xs">
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <FileText className="h-3.5 w-3.5" />
+          <span>{vehicle.challans?.length || 0} Challans</span>
+        </div>
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <Wrench className="h-3.5 w-3.5" />
+          <span>{vehicle.services?.length || 0} Services</span>
+        </div>
+      </div>
+
       <div className="flex gap-2">
         <Button
           onClick={() => navigate(`/vehicles/${vehicle.id}/edit`)}
