@@ -8,6 +8,9 @@ import logging
 from pathlib import Path
 import uuid
 from datetime import datetime, timezone, timedelta
+from typing import Optional
+import pandas as pd
+from io import BytesIO
 
 from models import (
     Vehicle, VehicleCreate, VehicleUpdate, 
