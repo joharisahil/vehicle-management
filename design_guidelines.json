@@ -1,0 +1,128 @@
+{
+  "identity": {
+    "name": "Garage Pro",
+    "tone": "Functional, Clear, Trustworthy, Heavy-Duty",
+    "description": "A mobile-first vehicle management dashboard designed for non-technical users. Priorities are legibility, large touch targets, and instant status recognition."
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-3xl md:text-4xl font-bold tracking-tight",
+      "h2": "text-2xl md:text-3xl font-semibold tracking-tight",
+      "h3": "text-xl md:text-2xl font-semibold",
+      "body_lg": "text-lg leading-relaxed",
+      "body_base": "text-base leading-relaxed",
+      "caption": "text-sm text-muted-foreground",
+      "label": "text-sm font-medium uppercase tracking-wide text-muted-foreground"
+    }
+  },
+  "colors": {
+    "light_mode": {
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "primary": "#0f172a",
+      "primary_foreground": "#f8fafc",
+      "secondary": "#f1f5f9",
+      "secondary_foreground": "#0f172a",
+      "accent": "#2563eb",
+      "border": "#e2e8f0"
+    },
+    "dark_mode": {
+      "background": "#020617",
+      "surface": "#0f172a",
+      "primary": "#f8fafc",
+      "primary_foreground": "#0f172a",
+      "secondary": "#1e293b",
+      "secondary_foreground": "#f8fafc",
+      "accent": "#3b82f6",
+      "border": "#1e293b"
+    },
+    "status": {
+      "valid": {
+        "bg": "bg-green-100 dark:bg-green-900/30",
+        "text": "text-green-700 dark:text-green-400",
+        "border": "border-green-500"
+      },
+      "expiring": {
+        "bg": "bg-amber-100 dark:bg-amber-900/30",
+        "text": "text-amber-700 dark:text-amber-400",
+        "border": "border-amber-500"
+      },
+      "expired": {
+        "bg": "bg-red-100 dark:bg-red-900/30",
+        "text": "text-red-700 dark:text-red-400",
+        "border": "border-red-500"
+      }
+    }
+  },
+  "layout_strategy": {
+    "mobile_first": true,
+    "grid_system": {
+      "dashboard_stats": "grid grid-cols-2 gap-4 md:grid-cols-4",
+      "vehicle_list": "flex flex-col gap-4 md:grid md:grid-cols-2 lg:grid-cols-3",
+      "form_layout": "flex flex-col gap-6 max-w-md mx-auto"
+    },
+    "spacing": {
+      "container_padding": "p-4 md:p-8",
+      "card_padding": "p-5",
+      "section_gap": "gap-8"
+    },
+    "navigation": {
+      "mobile": "Fixed bottom bar with large icons (Home, Vehicles, Add)",
+      "desktop": "Top navigation bar with logo left, links right"
+    }
+  },
+  "components": {
+    "Button": {
+      "specs": "h-12 md:h-14 px-6 rounded-xl font-semibold text-lg transition-all active:scale-95",
+      "variants": {
+        "primary": "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md",
+        "destructive": "bg-red-600 text-white hover:bg-red-700",
+        "outline": "border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground",
+        "ghost": "hover:bg-accent hover:text-accent-foreground"
+      }
+    },
+    "Card": {
+      "specs": "rounded-2xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow duration-200",
+      "usage": "Use for Vehicle Items. Add a colored left border (border-l-4) to indicate status."
+    },
+    "Badge": {
+      "specs": "rounded-full px-3 py-1 text-sm font-semibold tracking-wide",
+      "usage": "Place in top-right of cards to show status text (Valid, Expiring, Expired)."
+    },
+    "Input": {
+      "specs": "h-12 md:h-14 rounded-xl border-input bg-background px-4 text-lg ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": "shadow-lg for floating elements, shadow-sm for cards",
+    "borders": "Rounded-xl or Rounded-2xl for a friendly, modern feel",
+    "icons": "Use Lucide React icons. Stroke width 2px. Size 24px for buttons, 28px for nav."
+  },
+  "image_urls": {
+    "hero_background": "https://images.unsplash.com/photo-1719577959972-51669605946d?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "empty_state": "https://images.unsplash.com/photo-1727238451791-af16e7f7999b?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "placeholder_vehicle": "Use Lucide 'Car' icon with generic background if no image uploaded"
+  },
+  "instructions_to_main_agent": [
+    "Use Tailwind CSS for all styling. Do not install React Bootstrap; emulate its grid simplicity using Tailwind grid/flex.",
+    "Implement a 'ThemeToggle' component using 'next-themes' for Light/Dark mode.",
+    "Ensure all touch targets (buttons, inputs, list items) are at least 48px height for mobile accessibility.",
+    "For the 'Add Vehicle' form, break it into logical sections (Basic Info, Documents) to avoid a long scroll.",
+    "Use 'Sonner' for toast notifications (Success, Error, Reminders).",
+    "For status indicators, use BOTH color and text/icon to ensure accessibility for color-blind users.",
+    "The Dashboard must show a summary count at the top (Total, Expiring, Expired) before the list.",
+    "Vehicle Registration Plates should use a Monospace font (e.g., JetBrains Mono) and look like a physical plate (border, rounded corners, yellow/white bg)."
+  ],
+  "universal_guidelines": [
+    "Do not use generic gradients. Use solid colors or subtle mesh gradients.",
+    "All interactive elements MUST have 'data-testid' attributes.",
+    "Use 'lucide-react' for all icons.",
+    "Ensure high contrast ratios (APCA preferred) for all text.",
+    "Mobile-first: Always design for small screens first, then expand for desktop."
+  ]
+}
