@@ -480,6 +480,250 @@ export const VehicleForm = () => {
             )}
           </Card>
 
+          <Card className="p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl md:text-2xl font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>Challans</h2>
+              <Button
+                type="button"
+                onClick={addChallan}
+                variant="outline"
+                className="h-10 rounded-xl font-semibold"
+                data-testid="add-challan-button"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Add Challan
+              </Button>
+            </div>
+
+            {challans.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No challans added yet. Click "Add Challan" to start.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {challans.map((challan, index) => (
+                  <Card key={index} className="p-5 border-l-4 border-l-orange-500" data-testid={`challan-${index}`}>
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="font-semibold">Challan {index + 1}</h3>
+                      <Button
+                        type="button"
+                        onClick={() => removeChallan(index)}
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        data-testid={`remove-challan-${index}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Challan Number *</Label>
+                        <Input
+                          value={challan.challan_number}
+                          onChange={(e) => updateChallan(index, 'challan_number', e.target.value)}
+                          required
+                          className="h-12 rounded-xl"
+                          placeholder="CH123456"
+                          data-testid={`challan-number-${index}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Date *</Label>
+                        <Input
+                          type="date"
+                          value={challan.date}
+                          onChange={(e) => updateChallan(index, 'date', e.target.value)}
+                          required
+                          className="h-12 rounded-xl"
+                          data-testid={`challan-date-${index}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Amount (₹) *</Label>
+                        <Input
+                          type="number"
+                          value={challan.amount}
+                          onChange={(e) => updateChallan(index, 'amount', e.target.value)}
+                          required
+                          min="0"
+                          step="0.01"
+                          className="h-12 rounded-xl"
+                          placeholder="500"
+                          data-testid={`challan-amount-${index}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Reason *</Label>
+                        <Input
+                          value={challan.reason}
+                          onChange={(e) => updateChallan(index, 'reason', e.target.value)}
+                          required
+                          className="h-12 rounded-xl"
+                          placeholder="Over speeding"
+                          data-testid={`challan-reason-${index}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Status *</Label>
+                        <Select value={challan.status} onValueChange={(value) => updateChallan(index, 'status', value)}>
+                          <SelectTrigger className="h-12 rounded-xl" data-testid={`challan-status-${index}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="unpaid">Unpaid</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {challan.status === 'paid' && (
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium uppercase tracking-wide">Payment Date</Label>
+                          <Input
+                            type="date"
+                            value={challan.payment_date || ''}
+                            onChange={(e) => updateChallan(index, 'payment_date', e.target.value)}
+                            className="h-12 rounded-xl"
+                            data-testid={`challan-payment-date-${index}`}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl md:text-2xl font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>Service History</h2>
+              <Button
+                type="button"
+                onClick={addService}
+                variant="outline"
+                className="h-10 rounded-xl font-semibold"
+                data-testid="add-service-button"
+              >
+                <Wrench className="h-4 w-4 mr-2" />
+                Add Service
+              </Button>
+            </div>
+
+            {services.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No service records yet. Click "Add Service" to start.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {services.map((service, index) => (
+                  <Card key={index} className="p-5 border-l-4 border-l-teal-500" data-testid={`service-${index}`}>
+                    <div className="flex items-start justify-between mb-4">
+                      <h3 className="font-semibold">Service {index + 1}</h3>
+                      <Button
+                        type="button"
+                        onClick={() => removeService(index)}
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        data-testid={`remove-service-${index}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Service Type *</Label>
+                        <Select value={service.service_type} onValueChange={(value) => updateService(index, 'service_type', value)}>
+                          <SelectTrigger className="h-12 rounded-xl" data-testid={`service-type-${index}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SERVICE_TYPES.map(type => (
+                              <SelectItem key={type} value={type}>{type}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Date *</Label>
+                        <Input
+                          type="date"
+                          value={service.date}
+                          onChange={(e) => updateService(index, 'date', e.target.value)}
+                          required
+                          className="h-12 rounded-xl"
+                          data-testid={`service-date-${index}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Odometer (km) *</Label>
+                        <Input
+                          type="number"
+                          value={service.odometer}
+                          onChange={(e) => updateService(index, 'odometer', e.target.value)}
+                          required
+                          min="0"
+                          className="h-12 rounded-xl"
+                          placeholder="50000"
+                          data-testid={`service-odometer-${index}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Cost (₹) *</Label>
+                        <Input
+                          type="number"
+                          value={service.cost}
+                          onChange={(e) => updateService(index, 'cost', e.target.value)}
+                          required
+                          min="0"
+                          step="0.01"
+                          className="h-12 rounded-xl"
+                          placeholder="2500"
+                          data-testid={`service-cost-${index}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Description</Label>
+                        <Input
+                          value={service.description || ''}
+                          onChange={(e) => updateService(index, 'description', e.target.value)}
+                          className="h-12 rounded-xl"
+                          placeholder="Parts replaced, work done..."
+                          data-testid={`service-description-${index}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium uppercase tracking-wide">Next Service Due</Label>
+                        <Input
+                          type="date"
+                          value={service.next_service_due || ''}
+                          onChange={(e) => updateService(index, 'next_service_due', e.target.value)}
+                          className="h-12 rounded-xl"
+                          data-testid={`service-next-due-${index}`}
+                        />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </Card>
+
           <div className="flex gap-4">
             <Button
               type="button"
