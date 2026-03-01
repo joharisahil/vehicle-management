@@ -9,10 +9,14 @@ EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
 APP_NAME = "garage-pro"
 
 storage_key = None
+last_init_time = None
 
 def init_storage():
-    global storage_key
-    if storage_key:
+    global storage_key, last_init_time
+    import time
+    
+    current_time = time.time()
+    if storage_key and last_init_time and (current_time - last_init_time) < 3600:
         return storage_key
     
     try:
@@ -23,6 +27,7 @@ def init_storage():
         )
         resp.raise_for_status()
         storage_key = resp.json()["storage_key"]
+        last_init_time = current_time
         logger.info("Storage initialized successfully")
         return storage_key
     except Exception as e:
