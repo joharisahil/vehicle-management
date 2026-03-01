@@ -6,7 +6,7 @@ import { Layout } from '../components/Layout';
 import { VehicleCard } from '../components/VehicleCard';
 import { StatsCard } from '../components/StatsCard';
 import { Button } from '../components/ui/button';
-import { Car, AlertCircle, Clock, CheckCircle, Plus } from 'lucide-react';
+import { Car, AlertCircle, Clock, CheckCircle, Plus, FileText, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
