@@ -41,6 +41,9 @@ async def startup():
         logger.info("Storage initialized")
     except Exception as e:
         logger.error(f"Storage init failed: {e}")
+    
+    import asyncio
+    asyncio.create_task(run_reminder_scheduler())
 
 @api_router.post("/auth/register", response_model=Token)
 async def register(user_data: UserCreate):
