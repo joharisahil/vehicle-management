@@ -56,7 +56,12 @@ export const Login = () => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-sm font-medium uppercase tracking-wide">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-sm font-medium uppercase tracking-wide">Password</Label>
+              <Link to="/forgot-password" className="text-xs text-primary hover:underline" data-testid="forgot-password-link">
+                Forgot Password?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"
