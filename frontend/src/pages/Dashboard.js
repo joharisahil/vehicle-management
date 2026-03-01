@@ -146,6 +146,7 @@ export const Dashboard = () => {
   const handleDownloadTemplate = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/vehicles/template`, {
+        headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
       
