@@ -44,6 +44,8 @@ export const VehicleForm = () => {
   });
 
   const [documents, setDocuments] = useState([]);
+  const [challans, setChallans] = useState([]);
+  const [services, setServices] = useState([]);
 
   useEffect(() => {
     if (id) {
