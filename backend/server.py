@@ -386,6 +386,146 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
         upcoming_services=upcoming_services
     )
 
+@api_router.get("/vehicles/export")
+async def export_vehicles(current_user: dict = Depends(get_current_user)):
+    vehicles = await db.vehicles.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(10000)
+    
+    if not vehicles:
+        raise HTTPException(status_code=404, detail="No vehicles to export")
+    
+    data = []
+    for vehicle in vehicles:
+        base_data = {
+            "Nickname": vehicle.get("nickname"),
+            "Registration Number": vehicle.get("reg_number"),
+            "Vehicle Type": vehicle.get("vehicle_type"),
+            "Brand": vehicle.get("brand"),
+            "Model": vehicle.get("model"),
+            "Year": vehicle.get("year"),
+            "Fuel Type": vehicle.get("fuel_type"),
+            "Odometer": vehicle.get("odometer"),
+            "Active": vehicle.get("is_active", True),
+            "Total Documents": len(vehicle.get("documents", [])),
+            "Total Challans": len(vehicle.get("challans", [])),
+            "Total Services": len(vehicle.get("services", [])),
+            "Status": get_vehicle_status(vehicle.get("documents", []))
+        }
+        data.append(base_data)
+    
+    df = pd.DataFrame(data)
+    
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Vehicles', index=False)
+    
+    output.seek(0)
+    
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=vehicles_export.xlsx"}
+    )
+
+@api_router.get("/vehicles/template")
+async def get_import_template():
+    template_data = [
+        {
+            "Nickname": "My Car",
+            "Registration Number": "MH01AB1234",
+            "Vehicle Type": "Car",
+            "Brand": "Honda",
+            "Model": "City",
+            "Year": 2020,
+            "Fuel Type": "Petrol",
+            "Odometer": 50000
+        },
+        {
+            "Nickname": "Bike",
+            "Registration Number": "DL02CD5678",
+            "Vehicle Type": "Motorcycle",
+            "Brand": "Hero",
+            "Model": "Splendor",
+            "Year": 2019,
+            "Fuel Type": "Petrol",
+            "Odometer": 25000
+        }
+    ]
+    
+    df = pd.DataFrame(template_data)
+    
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, sheet_name='Vehicles', index=False)
+    
+    output.seek(0)
+    
+    return Response(
+        content=output.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=vehicle_import_template.xlsx"}
+    )
+
+@api_router.post("/vehicles/import")
+async def import_vehicles(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        contents = await file.read()
+        df = pd.read_excel(BytesIO(contents))
+        
+        required_columns = ["Nickname", "Registration Number", "Vehicle Type", "Brand", "Model", "Year", "Fuel Type", "Odometer"]
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing required columns: {', '.join(missing_columns)}"
+            )
+        
+        imported_count = 0
+        errors = []
+        
+        for index, row in df.iterrows():
+            try:
+                vehicle_id = str(uuid.uuid4())
+                now = datetime.now(timezone.utc).isoformat()
+                
+                vehicle_dict = {
+                    "id": vehicle_id,
+                    "user_id": current_user["id"],
+                    "nickname": str(row["Nickname"]),
+                    "reg_number": str(row["Registration Number"]).upper(),
+                    "vehicle_type": str(row["Vehicle Type"]),
+                    "brand": str(row["Brand"]),
+                    "model": str(row["Model"]),
+                    "year": int(row["Year"]),
+                    "fuel_type": str(row["Fuel Type"]),
+                    "odometer": int(row["Odometer"]),
+                    "is_active": True,
+                    "documents": [],
+                    "challans": [],
+                    "services": [],
+                    "created_at": now,
+                    "updated_at": now
+                }
+                
+                await db.vehicles.insert_one(vehicle_dict)
+                imported_count += 1
+                
+            except Exception as e:
+                errors.append(f"Row {index + 2}: {str(e)}")
+        
+        return {
+            "message": f"Successfully imported {imported_count} vehicles",
+            "imported": imported_count,
+            "errors": errors if errors else None
+        }
+        
+    except Exception as e:
+        logger.error(f"Import failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+
 app.include_router(api_router)
 
 app.add_middleware(
