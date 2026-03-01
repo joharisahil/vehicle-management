@@ -295,6 +295,12 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     expired_count = 0
     expiring_count = 0
     valid_count = 0
+    total_challans = 0
+    unpaid_challans = 0
+    upcoming_services = 0
+    
+    today = datetime.now().date()
+    thirty_days_later = today + timedelta(days=30)
     
     for vehicle in vehicles:
         status = get_vehicle_status(vehicle.get("documents", []))
@@ -304,14 +310,32 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
             expiring_count += 1
         else:
             valid_count += 1
+        
+        challans = vehicle.get("challans", [])
+        total_challans += len(challans)
+        unpaid_challans += sum(1 for c in challans if c.get("status") == "unpaid")
+        
+        services = vehicle.get("services", [])
+        for service in services:
+            next_due = service.get("next_service_due")
+            if next_due:
+                try:
+                    due_date = datetime.fromisoformat(next_due).date()
+                    if today <= due_date <= thirty_days_later:
+                        upcoming_services += 1
+                except:
+                    pass
     
-    check_reminders(vehicles)
+    check_and_send_reminders(vehicles)
     
     return DashboardStats(
         total_vehicles=total_vehicles,
         expired_documents=expired_count,
         expiring_soon=expiring_count,
-        valid_documents=valid_count
+        valid_documents=valid_count,
+        total_challans=total_challans,
+        unpaid_challans=unpaid_challans,
+        upcoming_services=upcoming_services
     )
 
 app.include_router(api_router)
