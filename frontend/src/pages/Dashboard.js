@@ -6,7 +6,8 @@ import { Layout } from '../components/Layout';
 import { VehicleCard } from '../components/VehicleCard';
 import { StatsCard } from '../components/StatsCard';
 import { Button } from '../components/ui/button';
-import { Car, AlertCircle, Clock, CheckCircle, Plus, FileText, Wrench } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Car, AlertCircle, Clock, CheckCircle, Plus, FileText, Wrench, Download, Upload, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -15,21 +16,50 @@ export const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
   const { token } = useAuth();
   const navigate = useNavigate();
 
-  const fetchData = async () => {
+  const [filters, setFilters] = useState({
+    status: '',
+    vehicleType: '',
+    challanFilter: '',
+    serviceFilter: ''
+  });
+  
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+
+  const fetchData = async (newPage = 1, currentFilters = filters) => {
     try {
+      const params = new URLSearchParams({
+        page: newPage,
+        limit: 10
+      });
+      
+      if (currentFilters.status) params.append('status_filter', currentFilters.status);
+      if (currentFilters.vehicleType) params.append('vehicle_type', currentFilters.vehicleType);
+      if (currentFilters.challanFilter) params.append('challan_filter', currentFilters.challanFilter);
+      if (currentFilters.serviceFilter) params.append('service_filter', currentFilters.serviceFilter);
+
       const [statsRes, vehiclesRes] = await Promise.all([
         axios.get(`${API_URL}/api/dashboard/stats`, {
           headers: { Authorization: `Bearer ${token}` }
         }),
-        axios.get(`${API_URL}/api/vehicles`, {
+        axios.get(`${API_URL}/api/vehicles?${params}`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
+      
       setStats(statsRes.data);
-      setVehicles(vehiclesRes.data);
+      
+      if (newPage === 1) {
+        setVehicles(vehiclesRes.data);
+      } else {
+        setVehicles(prev => [...prev, ...vehiclesRes.data]);
+      }
+      
+      setHasMore(vehiclesRes.data.length === 10);
     } catch (error) {
       toast.error('Failed to load dashboard data');
     } finally {
@@ -41,17 +71,110 @@ export const Dashboard = () => {
     fetchData();
   }, []);
 
-  const handleDelete = async (vehicleId) => {
-    if (!window.confirm('Are you sure you want to delete this vehicle?')) return;
+  const handleFilterChange = (filterType, value) => {
+    const newFilters = { ...filters, [filterType]: value };
+    setFilters(newFilters);
+    setPage(1);
+    setLoading(true);
+    fetchData(1, newFilters);
+  };
 
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchData(nextPage);
+  };
+
+  const handleToggleActive = async (vehicleId, isActive) => {
+    try {
+      await axios.put(`${API_URL}/api/vehicles/${vehicleId}`, 
+        { is_active: isActive },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(isActive ? 'Vehicle activated' : 'Vehicle deactivated');
+      fetchData(1);
+    } catch (error) {
+      toast.error('Failed to update vehicle status');
+    }
+  };
+
+  const handleDelete = async (vehicleId) => {
     try {
       await axios.delete(`${API_URL}/api/vehicles/${vehicleId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Vehicle deleted successfully');
-      fetchData();
+      fetchData(1);
     } catch (error) {
       toast.error('Failed to delete vehicle');
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/vehicles/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `vehicles_${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Vehicles exported successfully');
+    } catch (error) {
+      toast.error('Failed to export vehicles');
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/vehicles/template`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'vehicle_import_template.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Template downloaded');
+    } catch (error) {
+      toast.error('Failed to download template');
+    }
+  };
+
+  const handleImport = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(`${API_URL}/api/vehicles/import`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      toast.success(response.data.message);
+      if (response.data.errors && response.data.errors.length > 0) {
+        console.log('Import errors:', response.data.errors);
+      }
+      fetchData(1);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to import vehicles');
+    } finally {
+      setImporting(false);
+      event.target.value = '';
     }
   };
 
@@ -75,14 +198,53 @@ export const Dashboard = () => {
             </h1>
             <p className="text-muted-foreground mt-2 text-base md:text-lg">Manage your vehicles and documents</p>
           </div>
-          <Button
-            onClick={() => navigate('/vehicles/add')}
-            className="hidden md:flex h-12 md:h-14 px-6 rounded-xl font-semibold shadow-md active:scale-95 transition-transform"
-            data-testid="add-vehicle-desktop-button"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Vehicle
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleDownloadTemplate}
+              variant="outline"
+              className="hidden md:flex h-12 rounded-xl font-semibold"
+              data-testid="download-template-button"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Template
+            </Button>
+            <Button
+              onClick={handleExport}
+              variant="outline"
+              className="hidden md:flex h-12 rounded-xl font-semibold"
+              data-testid="export-button"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <label>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImport}
+                className="hidden"
+                disabled={importing}
+              />
+              <Button
+                as="span"
+                variant="outline"
+                className="hidden md:flex h-12 rounded-xl font-semibold cursor-pointer"
+                disabled={importing}
+                data-testid="import-button"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {importing ? 'Importing...' : 'Import'}
+              </Button>
+            </label>
+            <Button
+              onClick={() => navigate('/vehicles/add')}
+              className="h-12 md:h-14 px-6 rounded-xl font-semibold shadow-md active:scale-95 transition-transform"
+              data-testid="add-vehicle-desktop-button"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Vehicle
+            </Button>
+          </div>
         </div>
 
         {stats && (
@@ -101,13 +263,70 @@ export const Dashboard = () => {
           </>
         )}
 
+        <div className="bg-card rounded-2xl p-4 mb-6 border">
+          <div className="flex items-center gap-2 mb-4">
+            <Filter className="h-5 w-5" />
+            <h2 className="text-lg font-semibold">Filters</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+              <SelectTrigger data-testid="status-filter">
+                <SelectValue placeholder="Document Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value=" ">All Status</SelectItem>
+                <SelectItem value="valid">Valid</SelectItem>
+                <SelectItem value="expiring">Expiring Soon</SelectItem>
+                <SelectItem value="expired">Expired</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.vehicleType} onValueChange={(value) => handleFilterChange('vehicleType', value)}>
+              <SelectTrigger data-testid="vehicle-type-filter">
+                <SelectValue placeholder="Vehicle Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value=" ">All Types</SelectItem>
+                <SelectItem value="Car">Car</SelectItem>
+                <SelectItem value="Motorcycle">Motorcycle</SelectItem>
+                <SelectItem value="Truck">Truck</SelectItem>
+                <SelectItem value="SUV">SUV</SelectItem>
+                <SelectItem value="Van">Van</SelectItem>
+                <SelectItem value="Bus">Bus</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.challanFilter} onValueChange={(value) => handleFilterChange('challanFilter', value)}>
+              <SelectTrigger data-testid="challan-filter">
+                <SelectValue placeholder="Challans" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value=" ">All Challans</SelectItem>
+                <SelectItem value="unpaid">Unpaid Only</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={filters.serviceFilter} onValueChange={(value) => handleFilterChange('serviceFilter', value)}>
+              <SelectTrigger data-testid="service-filter">
+                <SelectValue placeholder="Services" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value=" ">All Services</SelectItem>
+                <SelectItem value="upcoming">Upcoming Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         {vehicles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4" data-testid="empty-state">
             <div className="h-32 w-32 rounded-full bg-secondary flex items-center justify-center mb-6">
               <Car className="h-16 w-16 text-muted-foreground" strokeWidth={1.5} />
             </div>
-            <h2 className="text-2xl font-semibold mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>No Vehicles Yet</h2>
-            <p className="text-muted-foreground text-center mb-6 max-w-md">Start by adding your first vehicle to track documents and stay on top of renewals.</p>
+            <h2 className="text-2xl font-semibold mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>No Vehicles Found</h2>
+            <p className="text-muted-foreground text-center mb-6 max-w-md">
+              {Object.values(filters).some(f => f) ? 'No vehicles match your filters. Try adjusting them.' : 'Start by adding your first vehicle to track documents and stay on top of renewals.'}
+            </p>
             <Button
               onClick={() => navigate('/vehicles/add')}
               className="h-14 px-8 rounded-xl font-semibold text-lg shadow-md active:scale-95 transition-transform"
@@ -122,11 +341,29 @@ export const Dashboard = () => {
             <h2 className="text-xl md:text-2xl font-semibold mb-4" style={{ fontFamily: 'Manrope, sans-serif' }} data-testid="vehicles-list-title">
               Your Vehicles
             </h2>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-testid="vehicles-grid">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6" data-testid="vehicles-grid">
               {vehicles.map((vehicle) => (
-                <VehicleCard key={vehicle.id} vehicle={vehicle} onDelete={handleDelete} />
+                <VehicleCard 
+                  key={vehicle.id} 
+                  vehicle={vehicle} 
+                  onDelete={handleDelete}
+                  onToggleActive={handleToggleActive}
+                />
               ))}
             </div>
+            
+            {hasMore && (
+              <div className="flex justify-center">
+                <Button
+                  onClick={handleLoadMore}
+                  variant="outline"
+                  className="h-12 px-8 rounded-xl font-semibold"
+                  data-testid="load-more-button"
+                >
+                  Load More
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
