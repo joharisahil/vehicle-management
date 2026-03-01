@@ -5,7 +5,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
 APP_NAME = "garage-pro"
 
 storage_key = None
@@ -21,6 +20,7 @@ def init_storage():
     
     resp = None
     try:
+        EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
         if not EMERGENT_KEY:
             raise ValueError("EMERGENT_LLM_KEY not found in environment")
         
