@@ -288,26 +288,62 @@ class VehicleManagementTester:
         return False
 
     def test_update_vehicle(self):
-        """Test updating vehicle"""
+        """Test updating vehicle with additional challans and services"""
         if not self.test_vehicle_id:
             print("❌ No vehicle ID available for update test")
             return False
 
+        today = datetime.now().strftime("%Y-%m-%d")
+        
+        # Add more challans and services 
         update_data = {
-            "nickname": "Updated Test Car",
-            "odometer": 20000
+            "challans": [
+                {
+                    "challan_number": "CH123456",
+                    "date": today,
+                    "amount": 500.0,
+                    "reason": "Over speeding",
+                    "status": "unpaid"
+                },
+                {
+                    "challan_number": "CH789012", 
+                    "date": today,
+                    "amount": 300.0,
+                    "reason": "Wrong parking",
+                    "status": "paid",
+                    "payment_date": today
+                }
+            ],
+            "services": [
+                {
+                    "service_type": "Oil Change",
+                    "date": today,
+                    "odometer": 15000,
+                    "cost": 2500.0,
+                    "description": "Full service"
+                },
+                {
+                    "service_type": "Tire Rotation",
+                    "date": today,
+                    "odometer": 15100,
+                    "cost": 800.0,
+                    "description": "Tire rotation and balancing"
+                }
+            ]
         }
         
         success, response = self.run_test(
-            "Update Vehicle",
+            "Update Vehicle (Add Challans & Services)",
             "PUT",
             f"vehicles/{self.test_vehicle_id}",
             200,
             data=update_data
         )
-        if success and response.get('nickname') == update_data['nickname']:
-            print(f"✅ Vehicle updated successfully")
-            return True
+        if success:
+            challans_count = len(response.get('challans', []))
+            services_count = len(response.get('services', []))
+            print(f"✅ Vehicle updated - Challans: {challans_count}, Services: {services_count}")
+            return challans_count == 2 and services_count == 2
         return False
 
     def test_file_upload(self):
