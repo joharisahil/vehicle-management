@@ -256,6 +256,16 @@ export const VehicleForm = () => {
   return (
     <Layout>
       <div className="max-w-3xl mx-auto">
+        <Button
+          onClick={() => navigate('/')}
+          variant="ghost"
+          className="mb-4"
+          data-testid="back-to-dashboard-button"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
+        
         <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ fontFamily: 'Manrope, sans-serif' }} data-testid="form-title">
           {id ? 'Edit Vehicle' : 'Add Vehicle'}
         </h1>
