@@ -185,9 +185,9 @@ class VehicleManagementTester:
         return False
 
     def test_create_vehicle(self):
-        """Test creating a new vehicle"""
+        """Test creating a new vehicle with documents, challans and services"""
         success, response = self.run_test(
-            "Create Vehicle",
+            "Create Vehicle (with all sections)",
             "POST",
             "vehicles",
             200,
@@ -195,8 +195,18 @@ class VehicleManagementTester:
         )
         if success and 'id' in response:
             self.test_vehicle_id = response['id']
+            docs_count = len(response.get('documents', []))
+            challans_count = len(response.get('challans', []))
+            services_count = len(response.get('services', []))
             print(f"✅ Vehicle created with ID: {self.test_vehicle_id}")
-            return True
+            print(f"   Documents: {docs_count}, Challans: {challans_count}, Services: {services_count}")
+            
+            # Verify all sections were saved
+            if docs_count == 1 and challans_count == 1 and services_count == 1:
+                print("✅ All sections (documents, challans, services) saved correctly")
+                return True
+            else:
+                print("❌ Not all sections saved correctly")
         return False
 
     def test_get_vehicle_by_id(self):
