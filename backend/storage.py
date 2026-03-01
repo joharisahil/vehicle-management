@@ -19,6 +19,7 @@ def init_storage():
     if storage_key and last_init_time and (current_time - last_init_time) < 3600:
         return storage_key
     
+    resp = None
     try:
         if not EMERGENT_KEY:
             raise ValueError("EMERGENT_LLM_KEY not found in environment")
@@ -37,7 +38,8 @@ def init_storage():
         return storage_key
     except Exception as e:
         logger.error(f"Storage init failed: {e}")
-        logger.error(f"Response text: {getattr(resp, 'text', 'N/A')}")
+        if resp:
+            logger.error(f"Response text: {resp.text}")
         raise
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
