@@ -453,6 +453,7 @@ def main():
         ("User Registration", tester.test_user_registration),
         ("User Login", tester.test_user_login),
         ("Get User Profile", tester.test_get_user_profile),
+        ("Forgot Password Flow", tester.test_forgot_password_flow),
         
         # Empty state tests
         ("Dashboard Stats (Empty)", tester.test_dashboard_stats_empty),
