@@ -436,7 +436,7 @@ async def export_vehicles(current_user: dict = Depends(get_current_user)):
     )
 
 @api_router.get("/vehicles/template")
-async def get_import_template():
+async def get_import_template(current_user: dict = Depends(get_current_user)):
     template_data = [
         {
             "Nickname": "My Car",
