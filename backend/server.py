@@ -108,11 +108,11 @@ async def forgot_password(data: ForgotPassword):
     })
     
     logger.info(f"[PASSWORD RESET] Email: {data.email}, Code: {reset_code}")
-    print(f"\\n=== PASSWORD RESET CODE ===\")
-    print(f\"Email: {data.email}\")
-    print(f\"Reset Code: {reset_code}\")
-    print(f\"Valid for: 1 hour\")
-    print(f\"=========================\\n\")
+    print(f"\n=== PASSWORD RESET CODE ===")
+    print(f"Email: {data.email}")
+    print(f"Reset Code: {reset_code}")
+    print(f"Valid for: 1 hour")
+    print(f"=========================\n")
     
     return {"message": "If the email exists, a reset code has been sent"}
 
