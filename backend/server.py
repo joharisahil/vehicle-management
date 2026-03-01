@@ -1,72 +1,264 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, status, UploadFile, File, Response, Query
+from fastapi.security import HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict
-from typing import List
 import uuid
 from datetime import datetime, timezone
 
+from models import (
+    Vehicle, VehicleCreate, VehicleUpdate, 
+    UserCreate, UserLogin, User, Token, DashboardStats,
+    DocumentSchema
+)
+from auth import hash_password, verify_password, create_access_token, get_current_user, security
+from storage import init_storage, put_object, get_object
+from utils import check_document_status, get_vehicle_status, check_reminders
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
 app = FastAPI()
-
-# Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
+@app.on_event("startup")
+async def startup():
+    try:
+        init_storage()
+        logger.info("Storage initialized")
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
+
+@api_router.post("/auth/register", response_model=Token)
+async def register(user_data: UserCreate):
+    existing_user = await db.users.find_one({"email": user_data.email}, {"_id": 0})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
     
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-class StatusCheckCreate(BaseModel):
-    client_name: str
-
-# Add your routes to the router instead of directly to app
-@api_router.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
+    user_id = str(uuid.uuid4())
+    user_dict = {
+        "id": user_id,
+        "email": user_data.email,
+        "name": user_data.name,
+        "password_hash": hash_password(user_data.password),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
     
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
+    await db.users.insert_one(user_dict)
     
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
+    access_token = create_access_token({"sub": user_id, "email": user_data.email})
+    user = User(id=user_id, email=user_data.email, name=user_data.name, created_at=user_dict["created_at"])
+    
+    return Token(access_token=access_token, token_type="bearer", user=user)
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
+@api_router.post("/auth/login", response_model=Token)
+async def login(credentials: UserLogin):
+    user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
+    if not user or not verify_password(credentials.password, user["password_hash"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password"
+        )
     
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
+    access_token = create_access_token({"sub": user["id"], "email": user["email"]})
+    user_obj = User(id=user["id"], email=user["email"], name=user["name"], created_at=user["created_at"])
     
-    return status_checks
+    return Token(access_token=access_token, token_type="bearer", user=user_obj)
 
-# Include the router in the main app
+@api_router.get("/auth/me", response_model=User)
+async def get_me(current_user: dict = Depends(get_current_user)):
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return User(**user)
+
+@api_router.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        ext = file.filename.split(".")[-1] if "." in file.filename else "bin"
+        path = f"garage-pro/uploads/{current_user['id']}/{uuid.uuid4()}.{ext}"
+        data = await file.read()
+        
+        result = put_object(path, data, file.content_type or "application/octet-stream")
+        
+        file_record = {
+            "id": str(uuid.uuid4()),
+            "storage_path": result["path"],
+            "original_filename": file.filename,
+            "content_type": file.content_type,
+            "size": result.get("size", len(data)),
+            "user_id": current_user["id"],
+            "is_deleted": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.files.insert_one(file_record)
+        
+        return {
+            "path": result["path"],
+            "original_filename": file.filename,
+            "size": file_record["size"]
+        }
+    except Exception as e:
+        logger.error(f"Upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@api_router.get("/files/{path:path}")
+async def download_file(
+    path: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    auth: str = Query(None)
+):
+    try:
+        token = credentials.credentials if credentials else auth
+        if not token:
+            raise HTTPException(status_code=401, detail="Authentication required")
+        
+        from auth import decode_token
+        payload = decode_token(token)
+        
+        record = await db.files.find_one({"storage_path": path, "is_deleted": False}, {"_id": 0})
+        if not record:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        data, content_type = get_object(path)
+        return Response(content=data, media_type=record.get("content_type", content_type))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Download failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
+
+@api_router.get("/vehicles", response_model=list[Vehicle])
+async def get_vehicles(current_user: dict = Depends(get_current_user)):
+    vehicles = await db.vehicles.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    
+    for vehicle in vehicles:
+        vehicle["status"] = get_vehicle_status(vehicle.get("documents", []))
+    
+    vehicles.sort(key=lambda v: (v["status"] != "expired", v["status"] != "expiring", v.get("created_at", "")))
+    
+    return vehicles
+
+@api_router.post("/vehicles", response_model=Vehicle)
+async def create_vehicle(
+    vehicle_data: VehicleCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    vehicle_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    vehicle_dict = vehicle_data.model_dump()
+    vehicle_dict.update({
+        "id": vehicle_id,
+        "user_id": current_user["id"],
+        "created_at": now,
+        "updated_at": now
+    })
+    
+    await db.vehicles.insert_one(vehicle_dict)
+    
+    return Vehicle(**vehicle_dict)
+
+@api_router.get("/vehicles/{vehicle_id}", response_model=Vehicle)
+async def get_vehicle(
+    vehicle_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    vehicle = await db.vehicles.find_one(
+        {"id": vehicle_id, "user_id": current_user["id"]},
+        {"_id": 0}
+    )
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    
+    vehicle["status"] = get_vehicle_status(vehicle.get("documents", []))
+    return Vehicle(**vehicle)
+
+@api_router.put("/vehicles/{vehicle_id}", response_model=Vehicle)
+async def update_vehicle(
+    vehicle_id: str,
+    vehicle_data: VehicleUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    vehicle = await db.vehicles.find_one(
+        {"id": vehicle_id, "user_id": current_user["id"]},
+        {"_id": 0}
+    )
+    if not vehicle:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    
+    update_data = vehicle_data.model_dump(exclude_unset=True)
+    if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.vehicles.update_one(
+            {"id": vehicle_id},
+            {"$set": update_data}
+        )
+    
+    updated_vehicle = await db.vehicles.find_one({"id": vehicle_id}, {"_id": 0})
+    updated_vehicle["status"] = get_vehicle_status(updated_vehicle.get("documents", []))
+    return Vehicle(**updated_vehicle)
+
+@api_router.delete("/vehicles/{vehicle_id}")
+async def delete_vehicle(
+    vehicle_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    result = await db.vehicles.delete_one(
+        {"id": vehicle_id, "user_id": current_user["id"]}
+    )
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    
+    return {"message": "Vehicle deleted successfully"}
+
+@api_router.get("/dashboard/stats", response_model=DashboardStats)
+async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    vehicles = await db.vehicles.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    
+    total_vehicles = len(vehicles)
+    expired_count = 0
+    expiring_count = 0
+    valid_count = 0
+    
+    for vehicle in vehicles:
+        status = get_vehicle_status(vehicle.get("documents", []))
+        if status == "expired":
+            expired_count += 1
+        elif status == "expiring":
+            expiring_count += 1
+        else:
+            valid_count += 1
+    
+    check_reminders(vehicles)
+    
+    return DashboardStats(
+        total_vehicles=total_vehicles,
+        expired_documents=expired_count,
+        expiring_soon=expiring_count,
+        valid_documents=valid_count
+    )
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -76,13 +268,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
