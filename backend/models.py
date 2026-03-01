@@ -17,6 +17,36 @@ class DocumentSchema(BaseModel):
             raise ValueError('Date must be in YYYY-MM-DD format')
         return v
 
+class ChallanSchema(BaseModel):
+    challan_number: str
+    date: str
+    amount: float
+    reason: str
+    status: str = "unpaid"
+    payment_date: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+    @field_validator('date', 'payment_date')
+    def validate_date_format(cls, v):
+        if v and not re.match(r'^\d{4}-\d{2}-\d{2}$', v):
+            raise ValueError('Date must be in YYYY-MM-DD format')
+        return v
+
+class ServiceSchema(BaseModel):
+    service_type: str
+    date: str
+    odometer: int
+    cost: float
+    description: Optional[str] = None
+    next_service_due: Optional[str] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+    @field_validator('date', 'next_service_due')
+    def validate_date_format(cls, v):
+        if v and not re.match(r'^\d{4}-\d{2}-\d{2}$', v):
+            raise ValueError('Date must be in YYYY-MM-DD format')
+        return v
+
 class VehicleBase(BaseModel):
     nickname: str
     reg_number: str
@@ -42,6 +72,8 @@ class VehicleBase(BaseModel):
 
 class VehicleCreate(VehicleBase):
     documents: List[DocumentSchema] = []
+    challans: List[ChallanSchema] = []
+    services: List[ServiceSchema] = []
 
 class Vehicle(VehicleBase):
     model_config = ConfigDict(extra="ignore")
@@ -49,6 +81,8 @@ class Vehicle(VehicleBase):
     id: str
     user_id: str
     documents: List[DocumentSchema] = []
+    challans: List[ChallanSchema] = []
+    services: List[ServiceSchema] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -62,6 +96,8 @@ class VehicleUpdate(BaseModel):
     fuel_type: Optional[str] = None
     odometer: Optional[int] = None
     documents: Optional[List[DocumentSchema]] = None
+    challans: Optional[List[ChallanSchema]] = None
+    services: Optional[List[ServiceSchema]] = None
 
 class UserCreate(BaseModel):
     email: str
@@ -84,6 +120,20 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class ForgotPassword(BaseModel):
+    email: str
+
+class ResetPassword(BaseModel):
+    email: str
+    reset_code: str
+    new_password: str
+    
+    @field_validator('new_password')
+    def validate_password(cls, v):
+        if len(v) < 6:
+            raise ValueError('Password must be at least 6 characters')
+        return v
+
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
     
@@ -102,3 +152,6 @@ class DashboardStats(BaseModel):
     expired_documents: int
     expiring_soon: int
     valid_documents: int
+    total_challans: int
+    unpaid_challans: int
+    upcoming_services: int
