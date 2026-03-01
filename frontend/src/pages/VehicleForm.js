@@ -215,6 +215,22 @@ export const VehicleForm = () => {
           expiry_date: doc.expiry_date,
           image_path: doc.image_path,
           original_filename: doc.original_filename
+        })),
+        challans: challans.map(c => ({
+          challan_number: c.challan_number,
+          date: c.date,
+          amount: parseFloat(c.amount),
+          reason: c.reason,
+          status: c.status,
+          payment_date: c.payment_date || null
+        })),
+        services: services.map(s => ({
+          service_type: s.service_type,
+          date: s.date,
+          odometer: parseInt(s.odometer),
+          cost: parseFloat(s.cost),
+          description: s.description || null,
+          next_service_due: s.next_service_due || null
         }))
       };
 
