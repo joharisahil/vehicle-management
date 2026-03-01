@@ -12,11 +12,11 @@ from datetime import datetime, timezone
 from models import (
     Vehicle, VehicleCreate, VehicleUpdate, 
     UserCreate, UserLogin, User, Token, DashboardStats,
-    DocumentSchema
+    DocumentSchema, ForgotPassword, ResetPassword
 )
 from auth import hash_password, verify_password, create_access_token, get_current_user, security
 from storage import init_storage, put_object, get_object
-from utils import check_document_status, get_vehicle_status, check_reminders
+from utils import check_document_status, get_vehicle_status, check_and_send_reminders, generate_reset_code
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
