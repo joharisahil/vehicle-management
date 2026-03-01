@@ -56,6 +56,7 @@ class VehicleBase(BaseModel):
     year: int
     fuel_type: str
     odometer: int
+    is_active: bool = True
     
     @field_validator('reg_number')
     def validate_reg_number(cls, v):
