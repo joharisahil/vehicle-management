@@ -243,7 +243,7 @@ class VehicleManagementTester:
         return False
 
     def test_dashboard_stats_with_data(self):
-        """Test dashboard stats with vehicles"""
+        """Test dashboard stats with vehicles - should include challan and service counts"""
         success, response = self.run_test(
             "Dashboard Stats (With Data)",
             "GET",
@@ -252,6 +252,8 @@ class VehicleManagementTester:
         )
         if success:
             print(f"✅ Dashboard stats: Total={response['total_vehicles']}, Valid={response['valid_documents']}, Expiring={response['expiring_soon']}, Expired={response['expired_documents']}")
+            print(f"   Challans: Total={response.get('total_challans', 0)}, Unpaid={response.get('unpaid_challans', 0)}")
+            print(f"   Upcoming Services: {response.get('upcoming_services', 0)}")
             return response['total_vehicles'] > 0
         return False
 
