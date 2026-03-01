@@ -203,15 +203,64 @@ async def download_file(
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
 @api_router.get("/vehicles", response_model=list[Vehicle])
-async def get_vehicles(current_user: dict = Depends(get_current_user)):
-    vehicles = await db.vehicles.find({"user_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+async def get_vehicles(
+    current_user: dict = Depends(get_current_user),
+    status_filter: Optional[str] = Query(None),
+    vehicle_type: Optional[str] = Query(None),
+    challan_filter: Optional[str] = Query(None),
+    service_filter: Optional[str] = Query(None),
+    show_inactive: bool = Query(False),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100)
+):
+    query = {"user_id": current_user["id"]}
+    
+    if not show_inactive:
+        query["is_active"] = {"$ne": False}
+    
+    if vehicle_type:
+        query["vehicle_type"] = vehicle_type
+    
+    vehicles = await db.vehicles.find(query, {"_id": 0}).to_list(10000)
+    
+    filtered_vehicles = []
+    today = datetime.now().date()
+    thirty_days_later = today + timedelta(days=30)
     
     for vehicle in vehicles:
         vehicle["status"] = get_vehicle_status(vehicle.get("documents", []))
+        
+        if status_filter and vehicle["status"] != status_filter:
+            continue
+        
+        if challan_filter == "unpaid":
+            unpaid = sum(1 for c in vehicle.get("challans", []) if c.get("status") == "unpaid")
+            if unpaid == 0:
+                continue
+        
+        if service_filter == "upcoming":
+            has_upcoming = False
+            for service in vehicle.get("services", []):
+                next_due = service.get("next_service_due")
+                if next_due:
+                    try:
+                        due_date = datetime.fromisoformat(next_due).date()
+                        if today <= due_date <= thirty_days_later:
+                            has_upcoming = True
+                            break
+                    except:
+                        pass
+            if not has_upcoming:
+                continue
+        
+        filtered_vehicles.append(vehicle)
     
-    vehicles.sort(key=lambda v: (v["status"] != "expired", v["status"] != "expiring", v.get("created_at", "")))
+    filtered_vehicles.sort(key=lambda v: (v["status"] != "expired", v["status"] != "expiring", v.get("created_at", "")))
     
-    return vehicles
+    start = (page - 1) * limit
+    end = start + limit
+    
+    return filtered_vehicles[start:end]
 
 @api_router.post("/vehicles", response_model=Vehicle)
 async def create_vehicle(
