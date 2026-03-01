@@ -150,6 +150,36 @@ class VehicleManagementTester:
             return True
         return False
 
+    def test_forgot_password_flow(self):
+        """Test forgot password functionality"""
+        # Test forgot password request
+        success, response = self.run_test(
+            "Forgot Password Request",
+            "POST",
+            "auth/forgot-password",
+            200,
+            data={"email": self.test_user["email"]}
+        )
+        if success:
+            print("✅ Forgot password request successful - check backend logs for reset code")
+            
+            # Test with invalid reset code
+            success2, response2 = self.run_test(
+                "Reset Password (Invalid Code)",
+                "POST", 
+                "auth/reset-password",
+                400,
+                data={
+                    "email": self.test_user["email"],
+                    "reset_code": "000000",
+                    "new_password": "newpass123"
+                }
+            )
+            if success2:
+                print("✅ Invalid reset code properly rejected")
+                return True
+        return False
+
     def test_dashboard_stats_empty(self):
         """Test dashboard stats with no vehicles - should have 7 fields now"""
         success, response = self.run_test(
