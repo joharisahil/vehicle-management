@@ -36,11 +36,7 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def startup():
-    try:
-        init_storage()
-        logger.info("Storage initialized")
-    except Exception as e:
-        logger.error(f"Storage init failed: {e}")
+    logger.info("Application started - storage will init on first use")
     
     import asyncio
     asyncio.create_task(run_reminder_scheduler())
