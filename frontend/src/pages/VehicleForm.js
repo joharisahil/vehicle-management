@@ -23,6 +23,7 @@ const DOC_TYPES = [
 
 const VEHICLE_TYPES = ['Car', 'Motorcycle', 'Truck', 'SUV', 'Van', 'Bus'];
 const FUEL_TYPES = ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'CNG', 'LPG'];
+const SERVICE_TYPES = ['Oil Change', 'Tire Rotation', 'Brake Service', 'General Service', 'Transmission', 'Battery', 'Other'];
 
 export const VehicleForm = () => {
   const { id } = useParams();
