@@ -69,6 +69,8 @@ export const VehicleForm = () => {
         odometer: response.data.odometer
       });
       setDocuments(response.data.documents || []);
+      setChallans(response.data.challans || []);
+      setServices(response.data.services || []);
     } catch (error) {
       toast.error('Failed to load vehicle data');
       navigate('/');
