@@ -348,6 +348,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+async def run_reminder_scheduler():
+    """
+    Background task that runs every 24 hours to check and send reminders
+    for documents expiring in 30, 15, 7, 3, 2, 1 days or expired
+    """
+    import asyncio
+    logger.info("Reminder scheduler started")
+    
+    while True:
+        try:
+            await asyncio.sleep(86400)
+            
+            logger.info("Running scheduled reminder check...")
+            all_vehicles = await db.vehicles.find({}, {"_id": 0}).to_list(10000)
+            check_and_send_reminders(all_vehicles)
+            logger.info(f"Reminder check completed for {len(all_vehicles)} vehicles")
+        except Exception as e:
+            logger.error(f"Error in reminder scheduler: {e}")
+            await asyncio.sleep(3600)
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
