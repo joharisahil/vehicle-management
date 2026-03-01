@@ -22,10 +22,10 @@ export const Dashboard = () => {
   const navigate = useNavigate();
 
   const [filters, setFilters] = useState({
-    status: '',
-    vehicleType: '',
-    challanFilter: '',
-    serviceFilter: '',
+    status: null,
+    vehicleType: null,
+    challanFilter: null,
+    serviceFilter: null,
     activeFilter: 'active'
   });
   
