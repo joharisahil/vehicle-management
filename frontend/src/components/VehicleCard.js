@@ -1,4 +1,4 @@
-import { Car, Edit, Trash2, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { Car, Edit, Trash2, AlertCircle, Clock, CheckCircle, FileText, Wrench } from 'lucide-react';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
