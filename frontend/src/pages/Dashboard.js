@@ -16,6 +16,7 @@ export const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const { token } = useAuth();
   const navigate = useNavigate();
@@ -24,13 +25,26 @@ export const Dashboard = () => {
     status: '',
     vehicleType: '',
     challanFilter: '',
-    serviceFilter: ''
+    serviceFilter: '',
+    activeFilter: 'active'
   });
   
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const fetchData = async (newPage = 1, currentFilters = filters) => {
+  const fetchStats = async () => {
+    try {
+      const statsRes = await axios.get(`${API_URL}/api/dashboard/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setStats(statsRes.data);
+    } catch (error) {
+      toast.error('Failed to load stats');
+    }
+  };
+
+  const fetchVehicles = async (newPage = 1, currentFilters = filters) => {
+    setVehiclesLoading(true);
     try {
       const params = new URLSearchParams({
         page: newPage,
@@ -41,17 +55,11 @@ export const Dashboard = () => {
       if (currentFilters.vehicleType) params.append('vehicle_type', currentFilters.vehicleType);
       if (currentFilters.challanFilter) params.append('challan_filter', currentFilters.challanFilter);
       if (currentFilters.serviceFilter) params.append('service_filter', currentFilters.serviceFilter);
+      if (currentFilters.activeFilter) params.append('active_filter', currentFilters.activeFilter);
 
-      const [statsRes, vehiclesRes] = await Promise.all([
-        axios.get(`${API_URL}/api/dashboard/stats`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get(`${API_URL}/api/vehicles?${params}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-      ]);
-      
-      setStats(statsRes.data);
+      const vehiclesRes = await axios.get(`${API_URL}/api/vehicles?${params}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       if (newPage === 1) {
         setVehicles(vehiclesRes.data);
@@ -61,10 +69,15 @@ export const Dashboard = () => {
       
       setHasMore(vehiclesRes.data.length === 10);
     } catch (error) {
-      toast.error('Failed to load dashboard data');
+      toast.error('Failed to load vehicles');
     } finally {
-      setLoading(false);
+      setVehiclesLoading(false);
     }
+  };
+
+  const fetchData = async () => {
+    await Promise.all([fetchStats(), fetchVehicles()]);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -75,14 +88,13 @@ export const Dashboard = () => {
     const newFilters = { ...filters, [filterType]: value };
     setFilters(newFilters);
     setPage(1);
-    setLoading(true);
-    fetchData(1, newFilters);
+    fetchVehicles(1, newFilters);
   };
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
     setPage(nextPage);
-    fetchData(nextPage);
+    fetchVehicles(nextPage);
   };
 
   const handleToggleActive = async (vehicleId, isActive) => {
@@ -92,7 +104,7 @@ export const Dashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success(isActive ? 'Vehicle activated' : 'Vehicle deactivated');
-      fetchData(1);
+      fetchData();
     } catch (error) {
       toast.error('Failed to update vehicle status');
     }
@@ -104,7 +116,7 @@ export const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Vehicle deleted successfully');
-      fetchData(1);
+      fetchData();
     } catch (error) {
       toast.error('Failed to delete vehicle');
     }
@@ -124,6 +136,7 @@ export const Dashboard = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Vehicles exported successfully');
     } catch (error) {
       toast.error('Failed to export vehicles');
@@ -143,6 +156,7 @@ export const Dashboard = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
       toast.success('Template downloaded');
     } catch (error) {
       toast.error('Failed to download template');
@@ -168,8 +182,9 @@ export const Dashboard = () => {
       toast.success(response.data.message);
       if (response.data.errors && response.data.errors.length > 0) {
         console.log('Import errors:', response.data.errors);
+        toast.warning(`${response.data.errors.length} rows had errors. Check console for details.`);
       }
-      fetchData(1);
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to import vehicles');
     } finally {
@@ -217,25 +232,24 @@ export const Dashboard = () => {
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
-            <label>
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleImport}
-                className="hidden"
-                disabled={importing}
-              />
-              <Button
-                as="span"
-                variant="outline"
-                className="hidden md:flex h-12 rounded-xl font-semibold cursor-pointer"
-                disabled={importing}
-                data-testid="import-button"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {importing ? 'Importing...' : 'Import'}
-              </Button>
-            </label>
+            <Button
+              onClick={() => document.getElementById('import-file-input').click()}
+              variant="outline"
+              className="hidden md:flex h-12 rounded-xl font-semibold"
+              disabled={importing}
+              data-testid="import-button"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {importing ? 'Importing...' : 'Import'}
+            </Button>
+            <input
+              id="import-file-input"
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImport}
+              className="hidden"
+              disabled={importing}
+            />
             <Button
               onClick={() => navigate('/vehicles/add')}
               className="h-12 md:h-14 px-6 rounded-xl font-semibold shadow-md active:scale-95 transition-transform"
@@ -268,13 +282,24 @@ export const Dashboard = () => {
             <Filter className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Filters</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Select value={filters.activeFilter} onValueChange={(value) => handleFilterChange('activeFilter', value)}>
+              <SelectTrigger data-testid="active-filter">
+                <SelectValue placeholder="Vehicle Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active Vehicles</SelectItem>
+                <SelectItem value="inactive">Inactive Vehicles</SelectItem>
+                <SelectItem value="all">All Vehicles</SelectItem>
+              </SelectContent>
+            </Select>
+
             <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
               <SelectTrigger data-testid="status-filter">
                 <SelectValue placeholder="Document Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value=" ">All Status</SelectItem>
+                <SelectItem value="">All Status</SelectItem>
                 <SelectItem value="valid">Valid</SelectItem>
                 <SelectItem value="expiring">Expiring Soon</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
@@ -286,7 +311,7 @@ export const Dashboard = () => {
                 <SelectValue placeholder="Vehicle Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value=" ">All Types</SelectItem>
+                <SelectItem value="">All Types</SelectItem>
                 <SelectItem value="Car">Car</SelectItem>
                 <SelectItem value="Motorcycle">Motorcycle</SelectItem>
                 <SelectItem value="Truck">Truck</SelectItem>
@@ -301,7 +326,7 @@ export const Dashboard = () => {
                 <SelectValue placeholder="Challans" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value=" ">All Challans</SelectItem>
+                <SelectItem value="">All Challans</SelectItem>
                 <SelectItem value="unpaid">Unpaid Only</SelectItem>
               </SelectContent>
             </Select>
@@ -311,21 +336,25 @@ export const Dashboard = () => {
                 <SelectValue placeholder="Services" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value=" ">All Services</SelectItem>
+                <SelectItem value="">All Services</SelectItem>
                 <SelectItem value="upcoming">Upcoming Only</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {vehicles.length === 0 ? (
+        {vehiclesLoading && vehicles.length === 0 ? (
+          <div className="flex items-center justify-center py-16" data-testid="vehicles-loading">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          </div>
+        ) : vehicles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-4" data-testid="empty-state">
             <div className="h-32 w-32 rounded-full bg-secondary flex items-center justify-center mb-6">
               <Car className="h-16 w-16 text-muted-foreground" strokeWidth={1.5} />
             </div>
             <h2 className="text-2xl font-semibold mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>No Vehicles Found</h2>
             <p className="text-muted-foreground text-center mb-6 max-w-md">
-              {Object.values(filters).some(f => f) ? 'No vehicles match your filters. Try adjusting them.' : 'Start by adding your first vehicle to track documents and stay on top of renewals.'}
+              {Object.values(filters).some(f => f && f !== 'active') ? 'No vehicles match your filters. Try adjusting them.' : 'Start by adding your first vehicle to track documents and stay on top of renewals.'}
             </p>
             <Button
               onClick={() => navigate('/vehicles/add')}
@@ -352,7 +381,11 @@ export const Dashboard = () => {
               ))}
             </div>
             
-            {hasMore && (
+            {vehiclesLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : hasMore ? (
               <div className="flex justify-center">
                 <Button
                   onClick={handleLoadMore}
@@ -363,7 +396,7 @@ export const Dashboard = () => {
                   Load More
                 </Button>
               </div>
-            )}
+            ) : null}
           </div>
         )}
       </div>
