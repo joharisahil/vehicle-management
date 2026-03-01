@@ -136,6 +136,48 @@ export const VehicleForm = () => {
     }
   };
 
+  const addChallan = () => {
+    setChallans([...challans, {
+      challan_number: '',
+      date: '',
+      amount: 0,
+      reason: '',
+      status: 'unpaid',
+      payment_date: null
+    }]);
+  };
+
+  const removeChallan = (index) => {
+    setChallans(challans.filter((_, i) => i !== index));
+  };
+
+  const updateChallan = (index, field, value) => {
+    const newChallans = [...challans];
+    newChallans[index] = { ...newChallans[index], [field]: value };
+    setChallans(newChallans);
+  };
+
+  const addService = () => {
+    setServices([...services, {
+      service_type: 'Oil Change',
+      date: '',
+      odometer: formData.odometer,
+      cost: 0,
+      description: '',
+      next_service_due: null
+    }]);
+  };
+
+  const removeService = (index) => {
+    setServices(services.filter((_, i) => i !== index));
+  };
+
+  const updateService = (index, field, value) => {
+    const newServices = [...services];
+    newServices[index] = { ...newServices[index], [field]: value };
+    setServices(newServices);
+  };
+
   const validateForm = () => {
     if (!formData.nickname || !formData.reg_number || !formData.vehicle_type || !formData.brand || !formData.model) {
       toast.error('Please fill all required fields');
