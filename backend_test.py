@@ -21,6 +21,9 @@ class VehicleManagementTester:
             "password": "testpass123"
         }
         
+        today = datetime.now().strftime("%Y-%m-%d")
+        future_date = (datetime.now() + timedelta(days=365)).strftime("%Y-%m-%d")
+        
         self.test_vehicle = {
             "nickname": "Test Car",
             "reg_number": "MH01AB1234",
@@ -33,13 +36,27 @@ class VehicleManagementTester:
             "documents": [
                 {
                     "doc_type": "insurance",
-                    "issue_date": "2024-01-01",
-                    "expiry_date": "2025-01-01"
-                },
+                    "issue_date": today,
+                    "expiry_date": future_date
+                }
+            ],
+            "challans": [
                 {
-                    "doc_type": "puc",
-                    "issue_date": "2024-06-01", 
-                    "expiry_date": "2024-12-01"  # This will be expired
+                    "challan_number": "CH123456",
+                    "date": today,
+                    "amount": 500.0,
+                    "reason": "Over speeding",
+                    "status": "unpaid"
+                }
+            ],
+            "services": [
+                {
+                    "service_type": "Oil Change",
+                    "date": today,
+                    "odometer": 15000,
+                    "cost": 2500.0,
+                    "description": "Full service",
+                    "next_service_due": (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
                 }
             ]
         }
