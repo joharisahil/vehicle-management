@@ -478,9 +478,21 @@ export const VehicleForm = () => {
                           />
                         </div>
                         {doc.original_filename && (
-                          <p className="text-xs text-green-600 dark:text-green-400">
-                            ✓ {doc.original_filename}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs text-green-600 dark:text-green-400">
+                              ✓ {doc.original_filename}
+                            </p>
+                            {doc.image_path && (
+                              <a
+                                href={`${process.env.REACT_APP_BACKEND_URL}/api/files/${doc.image_path}?auth=${token}`}
+                                download
+                                className="text-xs text-primary hover:underline"
+                                data-testid={`doc-download-${index}`}
+                              >
+                                Download
+                              </a>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
