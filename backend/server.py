@@ -7,7 +7,7 @@ import os
 import logging
 from pathlib import Path
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from models import (
     Vehicle, VehicleCreate, VehicleUpdate, 
